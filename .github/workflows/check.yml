@@ -1,0 +1,37 @@
+name: Verificar Jarvis
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: jarvis_ci
+          POSTGRES_DB: jarvis_ci
+          POSTGRES_PASSWORD: synthetic_ci_password
+        ports:
+          - 55432:5432
+        options: >-
+          --health-cmd "pg_isready -U jarvis_ci -d jarvis_ci"
+          --health-interval 5s --health-timeout 3s --health-retries 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: make install
+      - run: make check test
+      - name: Validar integração com PostgreSQL
+        env:
+          JARVIS_TEST_DATABASE_URL: postgresql+psycopg://jarvis_ci:synthetic_ci_password@127.0.0.1:55432/jarvis_ci
+        run: backend/.venv/bin/python -m pytest backend/tests
+      - run: frontend/node_modules/.bin/playwright install --with-deps chromium
+      - run: make browser-test

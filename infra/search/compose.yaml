@@ -1,0 +1,15 @@
+name: jarvis-search
+services:
+  searxng:
+    image: ${SEARXNG_IMAGE:-docker.io/searxng/searxng:2026.11.8-3a3dd15bf}
+    ports:
+      - "127.0.0.1:8888:8080"
+    environment:
+      SEARXNG_SECRET: ${SEARXNG_SECRET:?Inicie com python3 infra/search/start.py}
+      FORCE_OWNERSHIP: "false"
+    volumes:
+      - ./settings.yml:/etc/searxng/settings.yml:ro
+      - cache:/var/cache/searxng
+    restart: unless-stopped
+volumes:
+  cache:
